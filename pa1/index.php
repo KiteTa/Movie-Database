@@ -111,7 +111,63 @@
     <div class="container">
             <h1 style="text-align:center">COSI 127b</h1><br>
             <h3 style="text-align:center">Movie Database</h3><br>
-            </div>
+    </div>
+    
+
+    <div class="container">
+        <?php
+        // MySQL Connection
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "COSI127b";
+
+        try {
+            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            if (isset($_POST['likeMovie'])) {
+                $userEmail = $_POST['userEmail']; // The email address entered by the user
+                $movieId = $_POST['movieId']; // The ID of the movie the user likes
+
+                // Prepare the insert statement to record the like
+                $stmt = $conn->prepare("INSERT INTO Likes (uemail, mpid) VALUES (:userEmail, :movieId)");
+                $stmt->bindParam(':userEmail', $userEmail);
+                $stmt->bindParam(':movieId', $movieId);
+
+                try {
+                    $stmt->execute();
+                    echo "<p>Like recorded successfully!</p>";
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000) {
+                        // Handle duplicate entry error, if a user has already liked the same movie
+                        echo "<p>The user has already liked this movie.</p>";
+                    } else {
+                        // Handle any other database errors
+                        echo "<p>Error: " . $e->getMessage() . "</p>";
+                    }
+                }
+            }
+        } catch(PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+        $conn = null;
+        ?>
+    
+    <!-- Form to like a movie -->
+    <form method='post' action=''>
+        <div class='form-group'>
+            <label for='movieId'>Movie ID:</label>
+            <input type='number' class='form-control' name='movieId' id='movieId' required>
+        </div>
+        <div class='form-group'>
+            <label for='userEmail'>Your Email:</label>
+            <input type='email' class='form-control' name='userEmail' id='userEmail' required>
+        </div>
+        <button type='submit' class='btn btn-primary' name='likeMovie'>Like Movie</button>
+    </form>
+</div>
+    
     <div class="container">
         <div class="btn-group" role="group" aria-label="View Options">
             <!-- Button to view all movies -->
@@ -136,45 +192,6 @@
         try {
             $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
             $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-
-            
-            if (isset($_POST['likeMovie'])) {
-                $userEmail = $_POST['userEmail']; // The email address entered by the user
-                $movieId = $_POST['movieId']; // The ID of the movie the user likes
-        
-                // Prepare the insert statement to record the like
-                $stmt = $conn->prepare("INSERT INTO Likes (uemail, mpid) VALUES (:userEmail, :movieId)");
-                $stmt->bindParam(':userEmail', $userEmail);
-                $stmt->bindParam(':movieId', $movieId);
-
-        
-                try {
-                    $stmt->execute();
-                    echo "<p>Like recorded successfully!</p>";
-                } catch (PDOException $e) {
-                    if ($e->getCode() == 23000) {
-                        // Handle duplicate entry error, if a user has already liked the same movie
-                        echo "<p>The user has already liked this movie.</p>";
-                    } else {
-                        // Handle any other database errors
-                        echo "<p>Error: " . $e->getMessage() . "</p>";
-                    }
-                }
-            }
-        
-            // Form to like a movie
-            echo "<form method='post' action=''>";
-            echo "<div class='form-group'>";
-            echo "<label for='movieId'>Movie ID:</label>";
-            echo "<input type='number' class='form-control' name='movieId' id='movieId' required>";
-            echo "</div>";
-            echo "<div class='form-group'>";
-            echo "<label for='userEmail'>Your Email:</label>";
-            echo "<input type='email' class='form-control' name='userEmail' id='userEmail' required>";
-            echo "</div>";
-            echo "<button type='submit' class='btn btn-primary' name='likeMovie'>Like Movie</button>";
-            echo "</form>";
 
             // Check if view all movies button is clicked
             if(isset($_POST['view_movies'])) {

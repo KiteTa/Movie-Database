@@ -111,8 +111,9 @@
     <div class="container">
             <h1 style="text-align:center">COSI 127b</h1><br>
             <h3 style="text-align:center">Movie Database</h3><br>
-    </div>
-        <div class="container">
+            </div>
+    <div class="container">
+        <div class="btn-group" role="group" aria-label="View Options">
             <!-- Button to view all movies -->
             <form method="post" action="index.php">
                 <button class="btn btn-primary" type="submit" name="view_movies">View All Movies</button>
@@ -123,53 +124,112 @@
                 <button class="btn btn-primary" type="submit" name="view_actors">View All Actors</button>
             </form>
         </div>
-        <div class="container">
-            <?php
-            // MySQL Connection
-            $servername = "localhost";
-            $username = "root";
-            $password = "";
-            $dbname = "COSI127b";
+    </div>
+    <div class="container">
+        <?php
+        // MySQL Connection
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "COSI127b";
 
-            try {
-                $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
-                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        try {
+            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-                // Check if view all movies button is clicked
-                if(isset($_POST['view_movies'])) {
-                    $stmt = $conn->prepare("SELECT * FROM MotionPicture");
+
+            
+            if (isset($_POST['likeMovie'])) {
+                $userEmail = $_POST['userEmail']; // The email address entered by the user
+                $movieId = $_POST['movieId']; // The ID of the movie the user likes
+        
+                // Prepare the insert statement to record the like
+                $stmt = $conn->prepare("INSERT INTO Likes (uemail, mpid) VALUES (:userEmail, :movieId)");
+                $stmt->bindParam(':userEmail', $userEmail);
+                $stmt->bindParam(':movieId', $movieId);
+
+        
+                try {
                     $stmt->execute();
-                    $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                    echo "<h2>View All Movies</h2>";
-                    echo "<table class='table'>";
-                    echo "<thead class='bg-dark text-white'><tr><th>ID</th><th>Name</th><th>Genre</th><th>Rating</th><th>Budget</th><th>Production</th></tr></thead>";
-                    echo "<tbody>";
-                    foreach ($movies as $movie) {
-                        echo "<tr>";
-                        echo "<td>{$movie['id']}</td>";
-                        echo "<td>{$movie['name']}</td>";
-                        echo "<td>{$movie['genre']}</td>";
-                        echo "<td>{$movie['rating']}</td>";
-                        echo "<td>{$movie['budget']}</td>";
-                        echo "<td>{$movie['production']}</td>";
-                        echo "</tr>";
+                    echo "<p>Like recorded successfully!</p>";
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000) {
+                        // Handle duplicate entry error, if a user has already liked the same movie
+                        echo "<p>The user has already liked this movie.</p>";
+                    } else {
+                        // Handle any other database errors
+                        echo "<p>Error: " . $e->getMessage() . "</p>";
                     }
-                    echo "</tbody>";
-                    echo "</table>";
                 }
+            }
+        
+            // Form to like a movie
+            echo "<form method='post' action=''>";
+            echo "<div class='form-group'>";
+            echo "<label for='movieId'>Movie ID:</label>";
+            echo "<input type='number' class='form-control' name='movieId' id='movieId' required>";
+            echo "</div>";
+            echo "<div class='form-group'>";
+            echo "<label for='userEmail'>Your Email:</label>";
+            echo "<input type='email' class='form-control' name='userEmail' id='userEmail' required>";
+            echo "</div>";
+            echo "<button type='submit' class='btn btn-primary' name='likeMovie'>Like Movie</button>";
+            echo "</form>";
 
-                // Check if view all actors button is clicked (similar process for other queries)
-                // elseif(isset($_POST['view_actors'])) {
-                //     // Execute query to view all actors
-                //     // Display results in a table
-                // }
+            // Check if view all movies button is clicked
+            if(isset($_POST['view_movies'])) {
+                $stmt = $conn->prepare("SELECT MotionPicture.id, MotionPicture.name, GROUP_CONCAT(Genre.genre_name) AS genres, MotionPicture.rating, MotionPicture.budget, MotionPicture.production FROM MotionPicture JOIN Genre ON MotionPicture.id = Genre.mpid GROUP BY MotionPicture.id");
+
+                $stmt->execute();
+                $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo "<h2>View All Movies</h2>";
+                echo "<table class='table'>";
+                echo "<thead class='bg-dark text-white'><tr><th>ID</th><th>Name</th><th>Genre</th><th>Rating</th><th>Budget</th><th>Production</th></tr></thead>";
+                echo "<tbody>";
+                foreach ($movies as $movie) {
+                    echo "<tr>";
+                    echo "<td>{$movie['id']}</td>";
+                    echo "<td>{$movie['name']}</td>";
+                    echo "<td>{$movie['genres']}</td>";
+                    echo "<td>{$movie['rating']}</td>";
+                    echo "<td>{$movie['budget']}</td>";
+                    echo "<td>{$movie['production']}</td>";
+                    echo "</tr>";
+                }
+                echo "</tbody>";
+                echo "</table>";
             }
-            catch(PDOException $e) {
-                echo "Error: " . $e->getMessage();
+
+            // Check if view all actors button is clicked
+            elseif(isset($_POST['view_actors'])) {
+                $stmt = $conn->prepare("SELECT id, name, nationality, gender FROM people");
+
+                $stmt->execute();
+                $actors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo "<h2>View All Actors</h2>";
+                echo "<table class='table'>";
+                echo "<thead class='bg-dark text-white'><tr><th>Name</th><th>Gender</th><th>Nationality</th></tr></thead>";
+                echo "<tbody>";
+                foreach ($actors as $actor) {
+                    echo "<tr>";
+                    echo "<td>{$actor['name']}</td>";
+                    echo "<td>{$actor['gender']}</td>";
+                    echo "<td>{$actor['nationality']}</td>";
+                    echo "</tr>";
+                    
+                }
+                echo "</tbody>";
+                echo "</table>";
             }
-            $conn = null;
-            ?>
-        </div>
+        }
+        catch(PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+        $conn = null;
+        ?>
+    </div>
+
 </body>
 </html>

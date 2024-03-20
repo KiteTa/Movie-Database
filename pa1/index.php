@@ -614,6 +614,416 @@
             $conn = null;
         ?>
     </div>
+    <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+    <div>
+        <!-- Form for Query#8 -->
+        <form method='post' action=''>
+    <div class='form-group'>
+        <label for='boxOfficeCollection'>Box Office Collection Greater Than or Equal to:</label>
+        <input type='number' class='form-control' name='boxOfficeCollection' id='boxOfficeCollection' required>
+    </div>
+    <div class='form-group'>
+        <label for='budgetLimit'>Budget Less Than or Equal to:</label>
+        <input type='number' class='form-control' name='budgetLimit' id='budgetLimit' required>
+    </div>
+    <button type='submit' class='btn btn-primary' name='queryEight'>Find Producers</button>
+        </form>
+        <?php
+        // MySQL Connection
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "COSI127b";
+
+        try {
+            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if (isset($_POST['queryEight'])) {
+                $boxOfficeCollection = (int)$_POST['boxOfficeCollection'];
+                $budgetLimit = (int)$_POST['budgetLimit'];
+            
+                $stmt = $conn->prepare("
+                    SELECT pe.name AS producer_name, mp.name AS movie_name, mo.boxoffice_collection, mp.budget
+                    FROM people pe
+                    JOIN role r ON pe.id = r.pid
+                    JOIN motionpicture mp ON r.mpid = mp.id
+                    JOIN movie mo ON mp.id = mo.mpid
+                    WHERE r.role_name = 'Producer'
+                    AND pe.nationality = 'USA'
+                    AND mo.boxoffice_collection >= :boxOfficeCollection
+                    AND mp.budget <= :budgetLimit
+                ");
+                $stmt->bindParam(':boxOfficeCollection', $boxOfficeCollection, PDO::PARAM_INT);
+                $stmt->bindParam(':budgetLimit', $budgetLimit, PDO::PARAM_INT);
+            
+                $stmt->execute();
+                $producers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                foreach ($producers as $producer) {
+                    echo "<p>Producer: {$producer['producer_name']}, Movie: {$producer['movie_name']}, Box Office: {$producer['boxoffice_collection']}, Budget: {$producer['budget']}</p>";
+                }
+            }   
+
+        } catch(PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+        $conn = null;
+        ?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+    <!-- Form for Query 9 -->
+    <form method="post">
+    <input type="number" step="any" name="rating" placeholder="Enter Minimum Rating">
+    <input type="submit" name="findMultiRoles" value="Find Roles">
+    </form>
+    <?php
+        // MySQL Connection
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "COSI127b";
+
+        try {
+        $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            if (isset($_POST['findMultiRoles'])) {
+                $ratingLimit = $_POST['rating']; // Corrected the parameter name to match form input name
+
+                $stmt = $conn->prepare("SELECT People.name AS actor_name, MotionPicture.name AS movie_name, COUNT(Role.role_name) AS role_count
+                                        FROM People
+                                        JOIN Role ON People.id = Role.pid
+                                        JOIN MotionPicture ON Role.mpid = MotionPicture.id
+                                        WHERE MotionPicture.rating > :ratingLimit
+                                        GROUP BY People.id, MotionPicture.id
+                                        HAVING role_count > 1");
+                $stmt->bindParam(':ratingLimit', $ratingLimit, PDO::PARAM_STR);
+
+                $stmt->execute();
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Check if results were returned
+                if ($results) {
+                    // Loop through each result and print out
+                    foreach ($results as $row) {
+                        echo "Actor Name: " . htmlspecialchars($row['actor_name']) . 
+                            ", Movie Name: " . htmlspecialchars($row['movie_name']) . 
+                            ", Role Count: " . $row['role_count'] . "<br>";
+                    }
+                } else {
+                    echo "No actors found with multiple roles above the given rating limit.";
+                }
+            }
+
+        } catch(PDOException $e) {
+        echo "Error: " . $e->getMessage();
+        }
+        $conn = null;
+        ?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+    <!-- Form for query 10 -->
+    <form method="post" action="">
+    <button type="submit" name="findTopThrillers">Find Top Thrillers</button>
+    </form>
+    <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if (isset($_POST['findTopThrillers'])) {
+
+                $stmt = $conn->prepare("
+                    SELECT mp.name AS movie_name, mp.rating
+                    FROM MotionPicture mp
+                    JOIN Genre g ON mp.id = g.mpid
+                    JOIN Location l ON mp.id = l.mpid
+                    WHERE g.genre_name = 'Thriller' AND l.city = 'Boston'
+                    GROUP BY mp.id
+                    HAVING COUNT(l.city) = 1
+                    ORDER BY mp.rating DESC
+                    LIMIT 2
+                ");
+
+                $stmt->execute();
+                $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                if ($movies) {
+                    // Output the movie names and ratings
+                    foreach ($movies as $movie) {
+                        echo "Movie Name: " . htmlspecialchars($movie['movie_name']) . 
+                            ", Rating: " . htmlspecialchars($movie['rating']) . "<br>";
+                    }
+                } else {
+                    echo "No thriller movies found that match the criteria.";
+                }
+            }
+
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+    <!-- Form for Query 11 -->
+    <form method="post" action="">
+        <div class='form-group'>
+            <label for='likesLimit'>Likes Threshold (X):</label>
+            <input type='number' class='form-control' name='likesLimit' id='likesLimit' required>
+        </div>
+        <div class='form-group'>
+            <label for='ageLimit'>Age Limit (Y):</label>
+            <input type='number' class='form-control' name='ageLimit' id='ageLimit' required>
+        </div>
+        <button type='submit' class='btn btn-primary' name='queryEleven'>Find Movies</button>
+    </form>
+    <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            if (isset($_POST['queryEleven'])) {
+                // Assuming $_POST['likesLimit'] contains 'X' (likes threshold)
+                // and you have another input named 'ageLimit' for 'Y' (age limit)
+                $likesLimit = $_POST['likesLimit'];
+                $ageLimit = $_POST['ageLimit']; // Ensure you have this field in your form
+            
+                $stmt = $conn->prepare("
+                    SELECT MotionPicture.name, COUNT(Likes.uemail) as like_count
+                    FROM MotionPicture
+                    JOIN Likes ON MotionPicture.id = Likes.mpid
+                    JOIN User ON Likes.uemail = User.email
+                    WHERE User.age < :ageLimit
+                    GROUP BY MotionPicture.name
+                    HAVING like_count > :likesLimit
+                ");
+                $stmt->bindParam(':likesLimit', $likesLimit, PDO::PARAM_INT);
+                $stmt->bindParam(':ageLimit', $ageLimit, PDO::PARAM_INT);
+            
+                $stmt->execute();
+                $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                if ($movies) {
+                    foreach ($movies as $movie) {
+                        echo "<p>{$movie['name']} - Likes: {$movie['like_count']}</p>";
+                    }
+                } else {
+                    echo "No movies found with the specified criteria.";
+                }
+            }
+
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+    <!-- Form for Query 12 -->
+    <form method="post" action="">
+    <button type='submit' class='btn btn-primary' name='queryTwelve'>Find Actors in Marvel and Warner Bros</button>
+    </form>
+    <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			if (isset($_POST['queryTwelve'])) {
+                // This query selects actors who have been in productions by both Marvel and Warner Bros
+                $stmt = $conn->prepare("
+                    SELECT 
+                        pe.name AS actor_name, 
+                        GROUP_CONCAT(DISTINCT mp.name ORDER BY mp.name) AS movie_names 
+                    FROM 
+                        people pe
+                    JOIN 
+                        role r ON pe.id = r.pid
+                    JOIN 
+                        motionpicture mp ON r.mpid = mp.id
+                    WHERE 
+                        mp.production IN ('Marvel', 'Warner Bros')
+                    GROUP BY 
+                        pe.id
+                    HAVING 
+                        SUM(mp.production = 'Marvel') > 0 AND 
+                        SUM(mp.production = 'Warner Bros') > 0
+                ");
+            
+                $stmt->execute();
+                $actors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                if (!empty($actors)) {
+                    foreach ($actors as $actor) {
+                        echo "<p>{$actor['actor_name']} - Movies: {$actor['movie_names']}</p>";
+                    }
+                } else {
+                    echo "No actors found with roles in both Marvel and Warner Bros productions.";
+                }
+            }
+
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+       <!-- Form for Query 13 -->
+       <form method="post" action="">
+                <button type='submit' class='btn btn-primary' name='queryThirteen'>Find High Rated Comedies</button>
+       </form>
+       <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			if (isset($_POST['queryThirteen'])) {
+                $stmt = $conn->prepare("SELECT name, rating FROM MotionPicture WHERE rating > (SELECT AVG(rating) FROM MotionPicture JOIN Genre ON MotionPicture.id = Genre.mpid WHERE genre_name = 'Comedy') ORDER BY rating DESC");
+                
+                $stmt->execute();
+                $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                foreach ($movies as $movie) {
+                    echo "<p>{$movie['name']} - Rating: {$movie['rating']}</p>";
+                }
+            }
+
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+    <!-- Form for Query 14 -->
+    <form method="post" action="">
+    <button type='submit' class='btn btn-primary' name='queryFourteen'>Find Movies with Most Roles</button>
+    </form>
+    <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			if (isset($_POST['queryFourteen'])) {
+                $stmt = $conn->prepare("
+                    SELECT mp.name AS movie_name, COUNT(*) AS role_count 
+                    FROM MotionPicture mp 
+                    JOIN Role r ON mp.id = r.mpid 
+                    GROUP BY mp.id 
+                    ORDER BY role_count DESC 
+                    LIMIT 5
+                ");
+            
+                $stmt->execute();
+                $movies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                if ($movies) {
+                    foreach ($movies as $movie) {
+                        echo "<p>{$movie['movie_name']} - Number of Roles: {$movie['role_count']}</p>";
+                    }
+                } else {
+                    echo "No movies found or an error occurred.";
+                }
+            }
+
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+</div>
+
+<hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+<div>
+     <!-- Form for Query 15 -->
+     <form method="post" action="">
+                <button type='submit' class='btn btn-primary' name='queryFifteen'>Find Actors with Same Birthday</button>
+    </form>
+    <?php
+			// MySQL Connection
+			$servername = "localhost";
+			$username = "root";
+			$password = "";
+			$dbname = "COSI127b";
+			
+			try {
+			$conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			if (isset($_POST['queryFifteen'])) {
+                $stmt = $conn->prepare("
+                    SELECT 
+                        p1.name AS actor1_name, 
+                        p2.name AS actor2_name, 
+                        p1.dob AS common_birthday 
+                    FROM 
+                        People p1
+                    JOIN 
+                        People p2 ON p1.dob = p2.dob AND p1.id != p2.id
+                    GROUP BY 
+                        p1.dob, p1.name, p2.name
+                    HAVING 
+                        COUNT(p1.name) > 1
+                ");
+            
+                $stmt->execute();
+                $actors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+                if ($actors) {
+                    foreach ($actors as $actor) {
+                        echo "<p>Actor 1: " . htmlspecialchars($actor['actor1_name']) . 
+                             ", Actor 2: " . htmlspecialchars($actor['actor2_name']) . 
+                             ", Common Birthday: " . $actor['common_birthday'] . "</p>";
+                    }
+                } else {
+                    echo "No actors found with the same birthday.";
+                }
+            }
+			
+			} catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+			}
+			$conn = null;
+			?>
+</div>
 
 </body>
 </html>

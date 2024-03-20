@@ -469,7 +469,7 @@
     <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
 
     <div id="zipCodeDirector" class="container">
-        <!-- Form to search for a movie -->
+        <!-- Form to search zip code -->
         <form method='post' action='index.php'>
             <div class='form-group'>
                 <label for='zip'>Search For TV Directors By Zip Code</label>
@@ -550,5 +550,70 @@
 
     <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
     
+    <div id="kAwards" class="container">
+        <!-- Form to search for people who have received more than "k" awards -->
+        <form method='post' action='index.php'>
+            <div class='form-group'>
+                <label for='awardNum'>Number of Awards</label>
+                <input type='number' class='form-control' name='awardNum' id='awardNum' required placeholder="Number of Awards...">
+            </div>
+            <div class="text-right">
+                <button type='submit' class='btn btn-primary' name='submit'>Search</button>
+            </div>
+        </form>
+
+        <?php
+            // MySQL Connection
+            $servername = "localhost";
+            $username = "root";
+            $password = "";
+            $dbname = "COSI127b";
+
+            try {
+                $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                if (isset($_POST['awardNum'])) {
+                    $awardNum = $_POST['awardNum']; // Number of awards parameter
+                
+                    $stmt = $conn->prepare("SELECT People.name AS person_name, 
+                    MotionPicture.name AS m_name,
+                    Award.award_year,
+                    COUNT(*) AS award_count
+                    FROM Award
+                    INNER JOIN People ON Award.pid = People.id
+                    INNER JOIN MotionPicture ON Award.mpid = MotionPicture.id
+                    GROUP BY People.id, MotionPicture.id, Award.award_year
+                    HAVING COUNT(*) > :awardNum");
+                    $stmt->bindParam(':awardNum', $awardNum);
+                    $stmt->execute();
+                    $userData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                    if ($userData) {
+                        echo "<h3>People who have received more than $awardNum awards</h3>";
+                        echo "<table class='table'>";
+                        echo "<thead><tr><th>Person Name</th><th>Motion Picture Name</th><th>Award Year</th><th>Award Count</th></tr></thead>";
+                        echo "<tbody>";
+                        foreach ($userData as $row) {
+                            echo "<tr>";
+                            echo "<td>{$row['person_name']}</td>"; 
+                            echo "<td>{$row['m_name']}</td>";
+                            echo "<td>{$row['award_year']}</td>";
+                            echo "<td>{$row['award_count']}</td>";
+                            echo "</tr>";
+                        }
+                        echo "</tbody>";
+                        echo "</table>";
+                    } else {
+                        echo "<p>No one has received more than $awardNum awards for a single motion picture in the same year.</p>";
+                    }
+                }
+            } catch(PDOException $e) {
+                echo "Error: " . $e->getMessage();
+            }
+            $conn = null;
+        ?>
+    </div>
+
 </body>
 </html>

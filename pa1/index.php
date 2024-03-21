@@ -614,6 +614,156 @@
             $conn = null;
         ?>
     </div>
+    
+    <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+    <p>Youngest & Oldest Awarded Actors</p>
+
+    <div id="awardedActors" class="container">
+        <?php
+        // MySQL Connection
+        $servername = "localhost";
+        $username = "root";
+        $password = "";
+        $dbname = "COSI127b";
+
+
+        try {
+            $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+            $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            // SQL Query to retrieve data
+            $sql = "SELECT DISTINCT People.name AS actor_name, 
+            (YEAR(A.award_year) - YEAR(People.dob)) AS age
+            FROM Award A
+            INNER JOIN (
+                SELECT R.pid 
+                FROM Role R 
+                WHERE R.role_name = 'Actor'
+            ) AS Actors ON A.pid = Actors.pid
+            INNER JOIN People ON A.pid = People.id
+            WHERE (YEAR(A.award_year) - YEAR(People.dob)) = (
+                SELECT MAX(YEAR(A2.award_year) - YEAR(People.dob))
+                FROM Award A2
+                INNER JOIN People ON A2.pid = People.id
+                INNER JOIN (SELECT R.pid 
+                            FROM Role R 
+                            WHERE R.role_name = 'Actor') AS R2 ON A2.pid = R2.pid
+            ) OR (YEAR(A.award_year) - YEAR(People.dob)) = (
+                SELECT MIN(YEAR(A3.award_year) - YEAR(People.dob))
+                FROM Award A3
+                INNER JOIN People ON A3.pid = People.id
+                INNER JOIN (SELECT R.pid 
+                            FROM Role R 
+                            WHERE R.role_name = 'Actor') AS R3 ON A3.pid = R3.pid )";
+            
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($result) {
+                // Output the table
+                echo "<table border='1'>";
+                echo "<tr><th>Actor Name</th><th>Age</th></tr>";
+                foreach ($result as $row) {
+                    echo "<tr>";
+                    echo "<td>" . $row['actor_name'] . "</td>";
+                    echo "<td>" . $row['age'] . " years old</td>";
+                    echo "</tr>";
+                }
+                echo "</table>";
+            } else {
+                echo "No data available";
+            }
+        } catch(PDOException $e) {
+            echo "Error: " . $e->getMessage();
+        }
+        $conn = null;
+        ?>
+    </div>
+
+    <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
+    
+    <div id="producerBoxOffice" class="container">
+        <h2>Producer Box Office Collection</h2>
+        <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <div class="form-group">
+                <label for="boxoffice_threshold">Minimum Box Office Collection:</label>
+                <input type="number" class="form-control" id="boxoffice_threshold" name="boxoffice_threshold" required>
+            </div>
+            <div class="form-group">
+                <label for="budget_threshold">Maximum Budget:</label>
+                <input type="number" class="form-control" id="budget_threshold" name="budget_threshold" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+
+        <?php
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            // MySQL Connection
+            $servername = "localhost";
+            $username = "root";
+            $password = "";
+            $dbname = "COSI127b";
+
+            try {
+                $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+                // Define the parameters
+                $boxoffice_threshold = $_POST['boxoffice_threshold'];
+                $budget_threshold = $_POST['budget_threshold'];
+
+                // Prepare the SQL query
+                $sql = "SELECT People.name AS producer_name, 
+                            MotionPicture.name AS movie_name, 
+                            Movie.boxoffice_collection, 
+                            MotionPicture.budget
+                        FROM MotionPicture
+                        INNER JOIN People ON MotionPicture.production = People.id
+                        INNER JOIN Movie ON MotionPicture.id = Movie.mpid
+                        WHERE People.nationality = 'American' 
+                        AND Movie.boxoffice_collection >= :boxoffice_threshold 
+                        AND MotionPicture.budget <= :budget_threshold";
+
+                // Prepare the statement
+                $stmt = $conn->prepare($sql);
+
+                // Bind the parameters
+                $stmt->bindParam(':boxoffice_threshold', $boxoffice_threshold);
+                $stmt->bindParam(':budget_threshold', $budget_threshold);
+
+                // Execute the query
+                $stmt->execute();
+
+                // Fetch the results
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Check if there are results
+                if ($results) {
+                    // Output the results as a table
+                    echo "<table border='1'>";
+                    echo "<tr><th>Producer Name</th><th>Movie Name</th><th>Box Office Collection</th><th>Budget</th></tr>";
+                    foreach ($results as $row) {
+                        echo "<tr>";
+                        echo "<td>{$row['producer_name']}</td>";
+                        echo "<td>{$row['movie_name']}</td>";
+                        echo "<td>{$row['boxoffice_collection']}</td>";
+                        echo "<td>{$row['budget']}</td>";
+                        echo "</tr>";
+                    }
+                    echo "</table>";
+                } else {
+                    echo "No results found.";
+                }
+            } catch(PDOException $e) {
+                echo "Error: " . $e->getMessage();
+            }
+            $conn = null;
+        }
+        ?>
+
+    </div>
+    <hr class="round" style="border-top: 5px solid #000; border-radius: 5px;">
 
 </body>
 </html>

@@ -39,7 +39,5 @@ The application offers the following query search functionalities:
 3. **Run**: Start the web application server and access the application through a web browser.
 4. **Query Search**: Utilize the provided search functionality to query the movie database based on the specified criteria.
 
-## Logistics
 
-For parameterized queries, ensure that text boxes are provided to enter the required parameters. Front-end design improvements to meet functionality requirements are encouraged.
 
